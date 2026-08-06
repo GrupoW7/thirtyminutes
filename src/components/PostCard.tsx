@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { colors, font, radius, spacing } from '../theme';
 import { Avatar } from './ui';
+import { FollowButton } from './FollowButton';
 import { timeAgo } from '../lib/time';
 import type { FeedPost } from '../lib/social';
 
@@ -41,11 +42,18 @@ export function PostCard({
   return (
     <View style={styles.card}>
       <View style={styles.header}>
-        <Avatar uri={post.author.avatarUrl} name={post.author.fullName ?? post.author.username} size={40} />
-        <View style={{ flex: 1 }}>
-          <Text style={styles.name}>{post.author.fullName ?? post.author.username}</Text>
-          <Text style={styles.meta}>@{post.author.username} · {timeAgo(post.createdAt)}</Text>
-        </View>
+        <Pressable
+          style={styles.authorTap}
+          onPress={() => router.push(`/(app)/user/${post.userId}`)}
+          hitSlop={4}
+        >
+          <Avatar uri={post.author.avatarUrl} name={post.author.fullName ?? post.author.username} size={40} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.name}>{post.author.fullName ?? post.author.username}</Text>
+            <Text style={styles.meta}>@{post.author.username} · {timeAgo(post.createdAt)}</Text>
+          </View>
+        </Pressable>
+        <FollowButton targetId={post.userId} />
       </View>
 
       <View style={styles.mediaWrap}>
@@ -106,6 +114,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   header: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.md },
+  authorTap: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   name: { color: colors.text, fontSize: font.size.md, fontWeight: font.weight.bold },
   meta: { color: colors.textMuted, fontSize: font.size.xs },
   mediaWrap: { width: '100%', aspectRatio: 1, backgroundColor: colors.bg },

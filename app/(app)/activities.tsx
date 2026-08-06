@@ -22,15 +22,28 @@ import {
   fetchTodayActivities,
   fetchTotalPoints,
   removeActivity,
+  searchCommunityActivities,
   toggleActivityDone,
+  type CommunityActivity,
 } from '../../src/lib/activityService';
 import { levelFromPoints, suggestActivities } from '../../src/lib/activities';
+import { Pill } from '../../src/components/ui';
 import type {
   ActivityCatalogItem,
   ActivityProfile,
   UserActivity,
 } from '../../src/types/database';
 import { colors, font, radius, spacing } from '../../src/theme';
+
+const CATEGORY_ICON: Record<string, keyof typeof Ionicons.glyphMap> = {
+  Corpo: 'barbell-outline',
+  Mente: 'sparkles-outline',
+  Casa: 'home-outline',
+  Conexões: 'people-outline',
+  Criatividade: 'color-palette-outline',
+  Família: 'heart-outline',
+  Lazer: 'game-controller-outline',
+};
 
 export default function Activities() {
   const router = useRouter();
@@ -44,6 +57,10 @@ export default function Activities() {
   const [points, setPoints] = useState(0);
   const [streak, setStreak] = useState(0);
   const [customText, setCustomText] = useState('');
+  const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [communityQuery, setCommunityQuery] = useState('');
+  const [community, setCommunity] = useState<CommunityActivity[]>([]);
+  const [searching, setSearching] = useState(false);
 
   const load = useCallback(async () => {
     if (!meId) return;
@@ -71,10 +88,19 @@ export default function Activities() {
     }, [load]),
   );
 
+  // Categories present in the catalog, in a friendly order, each with an icon.
+  const categories = useMemo(() => {
+    const order = ['Corpo', 'Mente', 'Casa', 'Conexões', 'Criatividade', 'Família', 'Lazer'];
+    const present = new Set(catalog.map((c) => c.category));
+    return order.filter((c) => present.has(c));
+  }, [catalog]);
+
   const suggestions = useMemo(() => {
     const alreadyAdded = new Set(today.map((t) => t.catalog_id).filter(Boolean));
-    return suggestActivities(catalog, profile, 8).filter((s) => !alreadyAdded.has(s.id));
-  }, [catalog, profile, today]);
+    let base = suggestActivities(catalog, profile, 100).filter((s) => !alreadyAdded.has(s.id));
+    if (activeCategory) base = base.filter((s) => s.category === activeCategory);
+    return base.slice(0, 12);
+  }, [catalog, profile, today, activeCategory]);
 
   const level = levelFromPoints(points);
   const doneToday = today.filter((t) => t.completed).length;
@@ -114,6 +140,33 @@ export default function Activities() {
     }
   };
 
+  const onSearchCommunity = async (q: string) => {
+    setCommunityQuery(q);
+    if (q.trim().length < 2) {
+      setCommunity([]);
+      return;
+    }
+    setSearching(true);
+    try {
+      setCommunity(await searchCommunityActivities(meId, q));
+    } catch {
+      setCommunity([]);
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  const onAddCommunity = async (title: string) => {
+    try {
+      const created = await addCustomActivity(meId, title);
+      setToday((prev) => [...prev, created]);
+      setCommunityQuery('');
+      setCommunity([]);
+    } catch {
+      /* ignore */
+    }
+  };
+
   const onRemove = async (activity: UserActivity) => {
     setToday((prev) => prev.filter((a) => a.id !== activity.id));
     if (activity.completed) setPoints((p) => p - activity.points);
@@ -128,7 +181,7 @@ export default function Activities() {
     return (
       <SafeAreaView style={styles.safe}>
         <View style={styles.center}>
-          <ActivityIndicator color={colors.accent} size="large" />
+          <ActivityIndicator color={colors.primary} size="large" />
         </View>
       </SafeAreaView>
     );
@@ -141,7 +194,7 @@ export default function Activities() {
 
         {/* Gamification header */}
         <LinearGradient
-          colors={[colors.accent, colors.accentDark]}
+          colors={[colors.primary, colors.primaryDark]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.levelCard}
@@ -153,11 +206,11 @@ export default function Activities() {
             </View>
             <View style={styles.statsRight}>
               <View style={styles.statItem}>
-                <Ionicons name="flame" size={18} color={colors.bg} />
+                <Ionicons name="flame" size={18} color={colors.white} />
                 <Text style={styles.statText}>{streak} dias</Text>
               </View>
               <View style={styles.statItem}>
-                <Ionicons name="star" size={18} color={colors.bg} />
+                <Ionicons name="star" size={18} color={colors.white} />
                 <Text style={styles.statText}>{points} pts</Text>
               </View>
             </View>
@@ -173,7 +226,7 @@ export default function Activities() {
         {/* Profile CTA */}
         {!profile ? (
           <Pressable style={styles.profileCta} onPress={() => router.push('/(app)/activity-profile')}>
-            <Ionicons name="sparkles" size={22} color={colors.accent} />
+            <Ionicons name="sparkles" size={22} color={colors.primary} />
             <View style={{ flex: 1 }}>
               <Text style={styles.ctaTitle}>Monte seu perfil</Text>
               <Text style={styles.ctaSub}>Responda 4 perguntas e receba sugestões sob medida.</Text>
@@ -230,17 +283,85 @@ export default function Activities() {
             returnKeyType="done"
           />
           <Pressable style={styles.addBtn} onPress={onAddCustom}>
-            <Ionicons name="add" size={24} color={colors.bg} />
+            <Ionicons name="add" size={24} color={colors.white} />
           </Pressable>
         </View>
 
-        {/* Suggestions */}
-        {suggestions.length > 0 ? (
+        {/* Discover activities created by other users */}
+        <Text style={[styles.sectionTitle, { marginTop: spacing.xl }]}>Descobrir na comunidade</Text>
+        <View style={styles.searchBar}>
+          <Ionicons name="search" size={18} color={colors.textFaint} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Buscar atividades de outras pessoas..."
+            placeholderTextColor={colors.textFaint}
+            value={communityQuery}
+            onChangeText={onSearchCommunity}
+            autoCapitalize="none"
+          />
+          {searching ? (
+            <ActivityIndicator size="small" color={colors.primary} />
+          ) : communityQuery ? (
+            <Pressable onPress={() => onSearchCommunity('')} hitSlop={8}>
+              <Ionicons name="close-circle" size={18} color={colors.textFaint} />
+            </Pressable>
+          ) : null}
+        </View>
+        {communityQuery.trim().length >= 2 ? (
+          community.length === 0 && !searching ? (
+            <Text style={styles.emptyHint}>Nenhuma atividade encontrada na comunidade.</Text>
+          ) : (
+            community.map((c) => (
+              <Pressable key={c.title} style={styles.suggestRow} onPress={() => onAddCommunity(c.title)}>
+                <View style={styles.suggestIcon}>
+                  <Ionicons name="people-outline" size={20} color={colors.primary} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.suggestTitle}>{c.title}</Text>
+                  <Text style={styles.suggestDesc}>
+                    {c.byUsername ? `por @${c.byUsername}` : 'da comunidade'}
+                    {c.count > 1 ? ` · ${c.count} pessoas` : ''}
+                  </Text>
+                </View>
+                <View style={styles.suggestAdd}>
+                  <Ionicons name="add-circle" size={26} color={colors.primary} />
+                </View>
+              </Pressable>
+            ))
+          )
+        ) : null}
+
+        {/* Suggestions with category filter chips (davi-inspired) */}
+        {catalog.length > 0 ? (
           <>
             <Text style={[styles.sectionTitle, { marginTop: spacing.xl }]}>
               {profile ? 'Sugeridas para você' : 'Ideias para começar'}
             </Text>
-            {suggestions.map((item) => (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.chipsRow}
+            >
+              <Pill
+                label="Todas"
+                icon="grid-outline"
+                active={activeCategory === null}
+                onPress={() => setActiveCategory(null)}
+              />
+              {categories.map((cat) => (
+                <Pill
+                  key={cat}
+                  label={cat}
+                  icon={CATEGORY_ICON[cat]}
+                  active={activeCategory === cat}
+                  onPress={() => setActiveCategory(cat)}
+                />
+              ))}
+            </ScrollView>
+            {suggestions.length === 0 ? (
+              <Text style={styles.emptyHint}>Nenhuma sugestão nesta categoria.</Text>
+            ) : (
+              suggestions.map((item) => (
               <Pressable key={item.id} style={styles.suggestRow} onPress={() => onAddCatalog(item)}>
                 <View style={styles.suggestIcon}>
                   <Ionicons name={item.icon as keyof typeof Ionicons.glyphMap} size={20} color={colors.primary} />
@@ -250,10 +371,11 @@ export default function Activities() {
                   {item.description ? <Text style={styles.suggestDesc}>{item.description}</Text> : null}
                 </View>
                 <View style={styles.suggestAdd}>
-                  <Ionicons name="add-circle" size={26} color={colors.accent} />
+                  <Ionicons name="add-circle" size={26} color={colors.primary} />
                 </View>
               </Pressable>
-            ))}
+              ))
+            )}
           </>
         ) : null}
       </ScrollView>
@@ -268,22 +390,22 @@ const styles = StyleSheet.create({
   title: { color: colors.text, fontSize: font.size.xxl, fontWeight: font.weight.black },
   levelCard: { borderRadius: radius.xl, padding: spacing.lg, gap: spacing.md },
   levelRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  levelLabel: { color: colors.bg, fontSize: font.size.xs, fontWeight: font.weight.bold, opacity: 0.7, letterSpacing: 1 },
-  levelValue: { color: colors.bg, fontSize: 44, fontWeight: font.weight.black, lineHeight: 48 },
+  levelLabel: { color: colors.white, fontSize: font.size.xs, fontWeight: font.weight.bold, opacity: 0.8, letterSpacing: 1 },
+  levelValue: { color: colors.white, fontSize: 44, fontWeight: font.weight.black, lineHeight: 48 },
   statsRight: { gap: spacing.sm, alignItems: 'flex-end' },
   statItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  statText: { color: colors.bg, fontSize: font.size.md, fontWeight: font.weight.bold },
-  progressTrack: { height: 8, borderRadius: 4, backgroundColor: 'rgba(15,27,45,0.25)', overflow: 'hidden' },
-  progressFill: { height: '100%', backgroundColor: colors.bg, borderRadius: 4 },
-  progressText: { color: colors.bg, fontSize: font.size.xs, fontWeight: font.weight.semibold, opacity: 0.85 },
+  statText: { color: colors.white, fontSize: font.size.md, fontWeight: font.weight.bold },
+  progressTrack: { height: 8, borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.3)', overflow: 'hidden' },
+  progressFill: { height: '100%', backgroundColor: colors.white, borderRadius: 4 },
+  progressText: { color: colors.white, fontSize: font.size.xs, fontWeight: font.weight.semibold, opacity: 0.9 },
   profileCta: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.primaryTint,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: colors.accent,
+    borderColor: 'transparent',
     padding: spacing.lg,
   },
   ctaTitle: { color: colors.text, fontSize: font.size.md, fontWeight: font.weight.bold },
@@ -294,6 +416,19 @@ const styles = StyleSheet.create({
   sectionTitle: { color: colors.text, fontSize: font.size.lg, fontWeight: font.weight.bold },
   sectionCount: { color: colors.textMuted, fontSize: font.size.sm },
   emptyHint: { color: colors.textMuted, fontSize: font.size.sm, lineHeight: 20 },
+  chipsRow: { paddingVertical: spacing.sm, paddingRight: spacing.lg },
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.surfaceAlt,
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.lg,
+    height: 46,
+    marginTop: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  searchInput: { flex: 1, color: colors.text, fontSize: font.size.md },
   todoRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -323,7 +458,7 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: radius.md,
-    backgroundColor: colors.accent,
+    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -11,10 +11,11 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../src/context/AuthContext';
 import { Button } from '../src/components/ui';
+import { PhotoCollage } from '../src/components/PhotoCollage';
+import { LogoMark } from '../src/components/Logo';
 import { colors, font, spacing } from '../src/theme';
 
 const { width } = Dimensions.get('window');
@@ -72,9 +73,12 @@ export default function Onboarding() {
     <LinearGradient colors={[colors.bg, colors.bgElevated]} style={{ flex: 1 }}>
       <SafeAreaView style={{ flex: 1 }}>
         <View style={styles.topBar}>
-          <Text style={styles.brand}>
-            30<Text style={{ color: colors.primary }}>minutes</Text>
-          </Text>
+          <View style={styles.brandRow}>
+            <LogoMark size={28} showNumber={false} />
+            <Text style={styles.brand}>
+              30<Text style={{ color: colors.primary }}>minutes</Text>
+            </Text>
+          </View>
           {!isLast ? (
             <Pressable onPress={finish} hitSlop={12}>
               <Text style={styles.skip}>Pular</Text>
@@ -95,12 +99,7 @@ export default function Onboarding() {
           scrollEventThrottle={16}
           renderItem={({ item }) => (
             <View style={[styles.slide, { width }]}>
-              <Image
-                source={item.image}
-                style={styles.illustration}
-                contentFit="contain"
-                transition={250}
-              />
+              <PhotoCollage />
               <Text style={styles.title}>{item.title}</Text>
               <Text style={styles.body}>{item.body}</Text>
             </View>
@@ -146,6 +145,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.md,
   },
+  brandRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   brand: { color: colors.text, fontSize: font.size.xl, fontWeight: font.weight.black },
   skip: { color: colors.textMuted, fontSize: font.size.md, fontWeight: font.weight.medium },
   slide: { alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing.xxl, gap: spacing.xl },

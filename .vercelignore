@@ -1,0 +1,9 @@
+node_modules
+.expo
+.git
+*.log
+android
+ios
+supabase
+scripts
+.claude

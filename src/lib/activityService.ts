@@ -7,6 +7,46 @@ import type {
   UserActivity,
 } from '../types/database';
 
+export type CommunityActivity = { title: string; count: number; byUsername: string | null };
+
+/** Search activities that OTHER users created, so you can add them to your day. */
+export async function searchCommunityActivities(
+  meId: string,
+  query: string,
+): Promise<CommunityActivity[]> {
+  const q = query.trim();
+  if (q.length < 2) return [];
+  const { data } = await supabase
+    .from('user_activities')
+    .select('custom_title, user_id, created_at')
+    .neq('user_id', meId)
+    .not('custom_title', 'is', null)
+    .ilike('custom_title', `%${q}%`)
+    .order('created_at', { ascending: false })
+    .limit(80);
+
+  const map = new Map<string, { count: number; userId: string }>();
+  for (const r of data ?? []) {
+    const t = r.custom_title as string;
+    const e = map.get(t);
+    if (e) e.count += 1;
+    else map.set(t, { count: 1, userId: r.user_id });
+  }
+
+  const userIds = [...new Set([...map.values()].map((v) => v.userId))];
+  const names: Record<string, string> = {};
+  if (userIds.length) {
+    const { data: profs } = await supabase.from('profiles').select('id, username').in('id', userIds);
+    for (const p of profs ?? []) names[p.id] = p.username;
+  }
+
+  return [...map.entries()].map(([title, v]) => ({
+    title,
+    count: v.count,
+    byUsername: names[v.userId] ?? null,
+  }));
+}
+
 /** Load the catalog from Supabase, falling back to the local seed offline. */
 export async function fetchCatalog(): Promise<ActivityCatalogItem[]> {
   const { data, error } = await supabase.from('activity_catalog').select('*');

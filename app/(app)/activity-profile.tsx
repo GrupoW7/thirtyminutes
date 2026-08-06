@@ -122,7 +122,7 @@ export default function ActivityProfileScreen() {
               <Ionicons
                 name={e.icon as keyof typeof Ionicons.glyphMap}
                 size={24}
-                color={energy === e.value ? colors.bg : colors.textMuted}
+                color={energy === e.value ? colors.white : colors.textMuted}
               />
               <Text style={[styles.energyText, energy === e.value && styles.energyTextActive]}>
                 {e.label}
@@ -175,7 +175,7 @@ const styles = StyleSheet.create({
   },
   energyActive: { backgroundColor: colors.accent, borderColor: colors.accent },
   energyText: { color: colors.textMuted, fontSize: font.size.xs, fontWeight: font.weight.semibold, textAlign: 'center' },
-  energyTextActive: { color: colors.bg },
+  energyTextActive: { color: colors.white },
   switchRow: {
     flexDirection: 'row',
     alignItems: 'center',

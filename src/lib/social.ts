@@ -66,6 +66,16 @@ export async function fetchFeed(meId: string): Promise<FeedPost[]> {
   return (data as unknown as RawPost[]).map((r) => mapPost(r, meId));
 }
 
+export async function fetchPost(postId: string, meId: string): Promise<FeedPost | null> {
+  const { data, error } = await supabase
+    .from('posts')
+    .select(FEED_SELECT)
+    .eq('id', postId)
+    .maybeSingle();
+  if (error || !data) return null;
+  return mapPost(data as unknown as RawPost, meId);
+}
+
 export async function toggleLike(postId: string, userId: string, currentlyLiked: boolean) {
   if (currentlyLiked) {
     const { error } = await supabase

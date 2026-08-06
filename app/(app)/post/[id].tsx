@@ -14,8 +14,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useAuth } from '../../../src/context/AuthContext';
-import { addComment, fetchComments, type FeedComment } from '../../../src/lib/social';
+import { addComment, fetchComments, fetchPost, toggleLike, type FeedComment, type FeedPost } from '../../../src/lib/social';
 import { Avatar, EmptyState } from '../../../src/components/ui';
+import { PostCard } from '../../../src/components/PostCard';
 import { timeAgo } from '../../../src/lib/time';
 import { colors, font, spacing } from '../../../src/theme';
 
@@ -25,18 +26,43 @@ export default function PostComments() {
   const { session } = useAuth();
   const postId = String(id);
 
+  const [post, setPost] = useState<FeedPost | null>(null);
   const [comments, setComments] = useState<FeedComment[]>([]);
   const [loading, setLoading] = useState(true);
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
+  const meId = session?.user?.id ?? '';
 
   const load = useCallback(async () => {
     try {
-      setComments(await fetchComments(postId));
+      const [p, c] = await Promise.all([fetchPost(postId, meId), fetchComments(postId)]);
+      setPost(p);
+      setComments(c);
     } finally {
       setLoading(false);
     }
-  }, [postId]);
+  }, [postId, meId]);
+
+  const onToggleLike = useCallback(
+    async (p: FeedPost) => {
+      if (!meId) return;
+      try {
+        await toggleLike(p.id, meId, p.likedByMe);
+        setPost((prev) =>
+          prev
+            ? {
+                ...prev,
+                likedByMe: !prev.likedByMe,
+                likeCount: prev.likedByMe ? prev.likeCount - 1 : prev.likeCount + 1,
+              }
+            : prev,
+        );
+      } catch {
+        /* optimistic UI in the card already updated */
+      }
+    },
+    [meId],
+  );
 
   useEffect(() => {
     load();
@@ -61,7 +87,7 @@ export default function PostComments() {
         <Pressable onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="chevron-back" size={26} color={colors.text} />
         </Pressable>
-        <Text style={styles.topTitle}>Comentários</Text>
+        <Text style={styles.topTitle}>Publicação</Text>
         <View style={{ width: 26 }} />
       </View>
 
@@ -79,6 +105,14 @@ export default function PostComments() {
             data={comments}
             keyExtractor={(c) => c.id}
             contentContainerStyle={styles.list}
+            ListHeaderComponent={
+              post ? (
+                <View style={styles.postWrap}>
+                  <PostCard post={post} onToggleLike={onToggleLike} />
+                  <Text style={styles.commentsHeading}>Comentários</Text>
+                </View>
+              ) : null
+            }
             renderItem={({ item }) => (
               <View style={styles.commentRow}>
                 <Avatar uri={item.author.avatarUrl} name={item.author.fullName ?? item.author.username} size={36} />
@@ -123,6 +157,8 @@ export default function PostComments() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  postWrap: { marginBottom: spacing.sm },
+  commentsHeading: { color: colors.text, fontSize: font.size.md, fontWeight: font.weight.bold, marginTop: spacing.sm, marginBottom: spacing.xs },
   topBar: {
     flexDirection: 'row',
     alignItems: 'center',

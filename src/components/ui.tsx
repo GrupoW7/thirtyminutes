@@ -39,7 +39,7 @@ export function Button({
     ghost: 'transparent',
     danger: colors.danger,
   }[variant];
-  const fg = variant === 'ghost' ? colors.text : colors.bg;
+  const fg = variant === 'ghost' ? colors.text : colors.white;
 
   return (
     <Pressable
@@ -251,7 +251,7 @@ const styles = StyleSheet.create({
   },
   pillActive: { backgroundColor: colors.primary, borderColor: colors.primary },
   pillText: { color: colors.textMuted, fontSize: font.size.sm, fontWeight: font.weight.medium },
-  pillTextActive: { color: colors.bg, fontWeight: font.weight.bold },
+  pillTextActive: { color: colors.white, fontWeight: font.weight.bold },
   empty: { alignItems: 'center', justifyContent: 'center', padding: spacing.xxl, gap: spacing.sm },
   emptyTitle: { color: colors.text, fontSize: font.size.lg, fontWeight: font.weight.bold, marginTop: spacing.sm },
   emptySubtitle: { color: colors.textMuted, fontSize: font.size.sm, textAlign: 'center' },

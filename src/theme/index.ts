@@ -1,36 +1,36 @@
 /**
- * Design tokens for 30minutes.
- * A calm, "put the phone down and live" palette: deep night-blue base,
- * a fresh mint/green as the primary (growth, life, balance) and a warm
- * amber accent for the gamified activities world.
+ * Design tokens for 30minutes — "Atmospheric Logic".
+ * Modern Corporate, light-first: airy white/grey surfaces, a signature
+ * primary blue, tonal elevation instead of heavy shadows, high roundedness.
  */
 
 export const colors = {
   // Brand
-  primary: '#3DDC97', // mint green — the "live your life" energy
-  primaryDark: '#25B37A',
-  accent: '#FFB454', // warm amber — activities / gamification
-  accentDark: '#E8963A',
+  primary: '#0058bd', // signature blue
+  primaryDark: '#004494',
+  primaryTint: '#e5eefb', // light blue — active pills, secondary buttons
+  accent: '#F59E0B', // warm amber — activities / gamification
+  accentDark: '#B45309',
 
-  // Backgrounds (dark-first, this is a nighttime "less screen" app)
-  bg: '#0F1B2D',
-  bgElevated: '#16263D',
-  surface: '#1C2E49',
-  surfaceAlt: '#223655',
+  // Backgrounds (light, tonal elevation)
+  bg: '#f8f9fa', // base background
+  bgElevated: '#ffffff', // headers / tab bar
+  surface: '#ffffff', // cards — white sheets on the grey base
+  surfaceAlt: '#eef0f2', // subtle container (avatars, tracks)
 
   // Text
-  text: '#F4F7FB',
-  textMuted: '#9DB0C9',
-  textFaint: '#5E739A',
+  text: '#191c1d',
+  textMuted: '#424753',
+  textFaint: '#727785',
 
-  // Feedback
-  danger: '#FF6B6B',
-  warning: '#FFC864',
-  success: '#3DDC97',
+  // Feedback (semantic only)
+  danger: '#ba1a1a',
+  warning: '#f2a600',
+  success: '#34A853',
 
   // Lines
-  border: '#2A3E5E',
-  borderStrong: '#38517A',
+  border: '#e1e3e4',
+  borderStrong: '#c2c6d5',
 
   white: '#FFFFFF',
   black: '#000000',
@@ -74,11 +74,12 @@ export const font = {
 } as const;
 
 export const shadow = {
+  // Soft ambient elevation for floating elements (menus, FABs).
   card: {
-    shadowColor: '#000',
+    shadowColor: '#0b1f3a',
     shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.25,
-    shadowRadius: 12,
-    elevation: 6,
+    shadowOpacity: 0.1,
+    shadowRadius: 16,
+    elevation: 4,
   },
 } as const;

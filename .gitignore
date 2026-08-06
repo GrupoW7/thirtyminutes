@@ -35,3 +35,7 @@ yarn-error.*
 .idea/
 .vscode/
 *.tsbuildinfo  
+.vercel
+
+# logs de dev/build
+*.log

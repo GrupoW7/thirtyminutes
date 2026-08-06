@@ -76,6 +76,21 @@ export type DailyUsage = {
   updated_at: string;
 }
 
+export type Follow = {
+  follower_id: string;
+  following_id: string;
+  created_at: string;
+}
+
+export type Message = {
+  id: string;
+  sender_id: string;
+  recipient_id: string;
+  body: string;
+  read: boolean;
+  created_at: string;
+}
+
 /** A table entry shaped the way supabase-js's generic typing expects. */
 type TableDef<Row, Insert, Update> = {
   Row: Row;
@@ -119,6 +134,16 @@ export interface Database {
         DailyUsage,
         Partial<DailyUsage> & { user_id: string; usage_date: string },
         Partial<DailyUsage>
+      >;
+      follows: TableDef<
+        Follow,
+        { follower_id: string; following_id: string },
+        Partial<Follow>
+      >;
+      messages: TableDef<
+        Message,
+        Partial<Message> & { sender_id: string; recipient_id: string; body: string },
+        Partial<Message>
       >;
     };
     Views: Record<string, never>;
